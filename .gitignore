@@ -2,3 +2,11 @@ node_modules/
 dist/
 .env
 .DS_Store
+.venv/
+__pycache__/
+.pytest_cache/
+*.db
+*.db-*
+*.pyc
+.env.*
+!.env.example

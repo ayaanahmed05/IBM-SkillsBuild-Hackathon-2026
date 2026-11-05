@@ -1,0 +1,2 @@
+ibm-watsonx-orchestrate
+pydantic>=2.9,<3

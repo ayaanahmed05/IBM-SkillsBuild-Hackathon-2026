@@ -1,53 +1,6 @@
-import { StrictMode, useState } from "react";
+import { StrictMode, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-
-const scenarios = {
-  timeout: {
-    status: "WAIT",
-    title: "The game is about to resume.",
-    message: "A timeout is underway. Check nearby queues, but keep your trip short.",
-    clock: "02:41",
-    quarter: "Q4",
-    queue: 8,
-    crowd: "Moderate",
-    walk: 3,
-    reason: "Timeout detected · Short trip available",
-  },
-  critical: {
-    status: "STAY",
-    title: "Stay close to the action.",
-    message: "A critical possession is approaching. Delay nonessential trips.",
-    clock: "00:38",
-    quarter: "Q4",
-    queue: 11,
-    crowd: "High",
-    walk: 4,
-    reason: "Critical possession · High return risk",
-  },
-  steady: {
-    status: "GO",
-    title: "A good window for a quick trip.",
-    message: "Game pace is steady. A nearby concession or restroom trip may fit.",
-    clock: "06:18",
-    quarter: "Q3",
-    queue: 4,
-    crowd: "Low",
-    walk: 2,
-    reason: "Stable pace · Short queue · Nearby location",
-  },
-  resumed: {
-    status: "RETURN NOW",
-    title: "Head back before the next big moment.",
-    message: "Play has resumed. Prioritize returning to your seat.",
-    clock: "02:12",
-    quarter: "Q4",
-    queue: 7,
-    crowd: "Moderate",
-    walk: 3,
-    reason: "Play resumed · Seat return prioritized",
-  },
-};
 
 const scenarioLabels = [
   ["timeout", "Timeout"],
@@ -85,33 +38,67 @@ const agents = [
 
 function App() {
   const [theme, setTheme] = useState("dark");
-  const [scenarioKey, setScenarioKey] = useState("timeout");
-  const [destination, setDestination] = useState("Food");
-  const [accessible, setAccessible] = useState(false);
-  const [delivery, setDelivery] = useState(false);
+  const [snapshot, setSnapshot] = useState(null);
+  const [error, setError] = useState("");
+  const [connected, setConnected] = useState(false);
   const [activeNav, setActiveNav] = useState("Overview");
-  const [history, setHistory] = useState([
-    { status: "WAIT", note: "Timeout detected", time: "12:42 PM" },
-    { status: "GO", note: "Short queue available", time: "12:39 PM" },
-    { status: "STAY", note: "Critical possession", time: "12:34 PM" },
-  ]);
-
-  const current = scenarios[scenarioKey];
-
-  function changeScenario(key) {
-    setScenarioKey(key);
-    setHistory((items) => [
-      {
-        status: scenarios[key].status,
-        note: scenarioLabels.find(([id]) => id === key)?.[1] || key,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      },
-      ...items,
-    ].slice(0, 5));
+  const [history, setHistory] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  const version = useRef(-1);
+  const lastAction = useRef(null);
+  const session = useRef(null);
+  const retiredSessions = useRef(new Set());
+  const token = () => sessionStorage.getItem("momentguard-token") || "";
+  function accept(data, recovery = false) {
+    if (retiredSessions.current.has(data.sessionId)) return;
+    if (session.current !== data.sessionId) {
+      if (session.current && data.stateVersion <= version.current && !recovery) return;
+      if (session.current) retiredSessions.current.add(session.current);
+      session.current = data.sessionId;
+      version.current = -1;
+    }
+    if (data.stateVersion <= version.current) return;
+    version.current = data.stateVersion;
+    setSnapshot(data);
+    const action = data.recommendation.action;
+    if (lastAction.current !== action) {
+      setHistory(items => [{status: action, note: data.recommendation.reason, time: new Date(data.updatedAt).toLocaleTimeString()}, ...items].slice(0, 8));
+      lastAction.current = action;
+    }
   }
+  async function request(path, body) {
+    try {
+      const response = await fetch(`/api/${path}`, {method: body === undefined ? "GET" : "POST", headers: {"Content-Type": "application/json", ...(token() ? {Authorization: `Bearer ${token()}`} : {})}, ...(body === undefined ? {} : {body: JSON.stringify(body)})});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || data.detail || "Request failed");
+      if (data.stateVersion !== undefined) accept(data);
+      setError("");
+      return data;
+    } catch (e) { setError(e.message); }
+  }
+  useEffect(() => {
+    let socket, retry, stopped = false;
+    request("state");
+    function connect() {
+      socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/live`);
+      socket.onopen = () => { if (stopped) return; if (token()) socket.send(JSON.stringify({token: token()})); setConnected(true); };
+      socket.onmessage = event => { const message = JSON.parse(event.data); if (message.payload?.snapshot) accept(message.payload.snapshot, message.type === "snapshot"); };
+      socket.onerror = () => setConnected(false);
+      socket.onclose = () => { if (stopped) return; setConnected(false); if (!stopped) retry = setTimeout(connect, 1500); };
+    }
+    connect();
+    return () => { stopped = true; clearTimeout(retry); socket?.close(); };
+  }, []);
+  const scenarioKey = snapshot?.state.scenario || "critical";
+  const destination = {food: "Food", restroom: "Restroom", shop: "Shop"}[snapshot?.fan.need || "food"];
+  const accessible = snapshot?.fan.accessible || false;
+  const delivery = snapshot?.fan.delivery || false;
+  const rec = snapshot?.recommendation;
+  const current = {status: rec?.action || "WAIT", title: rec?.title || "Connecting to MomentGuard…", message: rec?.explanation || "Waiting for backend state", reason: rec?.reason || "No state received", clock: snapshot?.state.clock.split(" · ")[1] || "—", quarter: `Q${snapshot?.state.quarter || "—"}`, queue: rec?.tripEstimate.queueMinutes ?? "—", walk: rec?.tripEstimate.walkMinutes ?? "—", crowd: Math.max(...(snapshot?.facilities.map(f => f.queue) || [0])) > 10 ? "High" : "Moderate"};
+  function changeScenario(key) { request("scenario", {scenario: key}); }
+  function setDestination(value) { request("need", {need: value.toLowerCase()}); }
+  function setAccessible(value) { request("preferences", {accessible: value, delivery, speed: snapshot.fan.speed}); }
+  function setDelivery(value) { request("preferences", {accessible, delivery: value, speed: snapshot.fan.speed}); }
 
   function goTo(section) {
     setActiveNav(section);
@@ -162,7 +149,7 @@ function App() {
             <h1>Never miss <span>the moment.</span></h1>
             <p>Your intelligent game-day companion. Less waiting, smarter moves, more time in the action.</p>
           </div>
-          <div className="live-label"><i /> LIVE </div>
+          <div className="live-label"><i /> {connected ? "SIMULATED · CONNECTED" : "SIMULATED · RECONNECTING"} </div>
         </section>
 
         <section className="game-banner">
@@ -174,7 +161,7 @@ function App() {
                 <div><strong>Raptors</strong><small>HOME</small></div>
               </div>
               <div className="score-block">
-                <div className="score">98 <span>—</span> 96</div>
+                <div className="score">{snapshot?.state.scoreA ?? "—"} <span>—</span> {snapshot?.state.scoreB ?? "—"}</div>
                 <div className="clock">{current.quarter} · {current.clock}</div>
               </div>
               <div className="team away">
@@ -206,10 +193,33 @@ function App() {
           </div>
 
           <div className="confidence-row">
-            <span>Decision confidence <strong>{scenarioKey === "critical" ? "96%" : scenarioKey === "timeout" ? "94%" : scenarioKey === "resumed" ? "91%" : "87%"}</strong></span>
-            <span className="simulation-note"> ESTIMATE</span>
+            <span>Moment risk score <strong>{rec?.riskScore ?? "—"} / 100</strong></span>
+            <span className="simulation-note"> HEURISTIC</span>
           </div>
-          <div className="progress-track"><div style={{ width: `${scenarioKey === "critical" ? 96 : scenarioKey === "timeout" ? 94 : scenarioKey === "resumed" ? 91 : 87}%` }} /></div>
+          <div className="progress-track"><div style={{ width: `${rec?.riskScore || 0}%` }} /></div>
+        </section>
+
+        {error && <div role="alert" className="reason-box">{error}</div>}
+        <section className="panel runtime-controls">
+          <div className="section-heading"><h2>Simulation and trip controls</h2><span>All orders and data are simulated</span></div>
+          <button onClick={() => request("simulation/auto", {enabled: !snapshot?.automatic})}>{snapshot?.automatic ? "Pause" : "Start"} automatic progression</button>
+          <button onClick={() => request("simulation/tick", {seconds: 30})}>Advance 30 seconds</button>
+          <button onClick={() => request("reset", {})}>Reset simulation</button>
+          <button disabled={current.status !== "GO"} onClick={() => request("trips/start", {})}>Start recommended trip</button>
+          <p>Trip: {snapshot?.fan.trip?.status || "At seat"} · Destination: {rec?.destination || "None eligible"} · Complete estimate: {rec?.roundTripMinutes ?? "—"} min</p>
+          <p>Calculation: walk out + queue + service + return walk + safety buffer. Available window: {snapshot?.state.availableWindowMinutes?.toFixed(1) || "0"} min.</p>
+          <div className="facility-options">{snapshot?.facilities.map(f => <div key={f.id}>
+            <strong>{f.name}</strong> · {f.queue} waiting · {f.open ? "Open" : "Closed"}
+            <button onClick={() => request(`facilities/${f.id}`, {queue: f.queue + 10})}>Queue spike</button>
+            <button onClick={() => request(`facilities/${f.id}`, {open: !f.open})}>{f.open ? "Close" : "Reopen"}</button>
+          </div>)}</div>
+          {rec?.calculation && <p>Route: {rec.calculation.route.path.join(" → ")}</p>}
+          <button onClick={() => { if (window.confirm("Confirm simulated water order for $3 CAD? No payment is processed.")) request("orders", {facility: "food-north", item: "water", mode: delivery ? "delivery" : "pickup", confirmed: true}); }}>Confirm simulated water order · $3</button>
+          {snapshot?.orders.map(o => <p key={o.id}>SIMULATED {o.item} · {o.mode} · {o.status} {o.status === "preparing" && <button onClick={() => request(`orders/${o.id}/cancel`, {})}>Cancel</button>}</p>)}
+          <button onClick={async () => { const data = await request("experiments?seed=42&fans=30"); if (data) setAnalytics(data); }}>Run reproducible experiment</button>
+          {analytics && <pre className="trace-output">{JSON.stringify(analytics.runs && Object.fromEntries(Object.entries(analytics.runs).map(([k,v]) => [k,v.metrics])), null, 2)}</pre>}
+          <h3>Actual evaluation trace</h3>
+          {snapshot?.agents.length ? snapshot.agents.map((t,i) => <p key={i}>{t.provider} · {t.summary} · {t.latencyMs} ms</p>) : <p>No agent evaluations recorded. IBM has not been invoked.</p>}
         </section>
 
         <section className="scenario-section">
@@ -301,15 +311,15 @@ function App() {
               <div className="trip-card-header"><span>✳ YOUR TRIP PLAN</span></div>
               <div className="trip-destination"><span className="trip-icon">⌖</span><div><strong>{destination}</strong><p>{accessible ? "Accessible route preference" : "Standard estimated route"}</p></div></div>
               <div className="trip-stats"><div><small>WALK</small><strong>{current.walk} min</strong></div><div><small>QUEUE</small><strong>{current.queue} min</strong></div><div><small>CROWD</small><strong>{current.crowd}</strong></div></div>
-              {delivery && destination === "Food" && <div className="delivery-note">Food-to-seat alternative selected. Ordering is not connected.</div>}
+              {delivery && destination === "Food" && <div className="delivery-note">Simulated delivery available at North Concessions. Confirm an order below.</div>}
             </div>
           </section>
         </div>
 
         <section className="panel agents-panel" id="insights">
           <div className="section-heading">
-            <div><div className="eyebrow">BEHIND THE RECOMMENDATION</div><h2>Agent workflow</h2><p>A transparent view of how the simulated decision is assembled.</p></div>
-            <span className="workflow-pill"><i /> Workflow preview</span>
+            <div><div className="eyebrow">BEHIND THE RECOMMENDATION</div><h2>Agent workflow</h2><p>Deterministic tools are active. IBM execution is unverified until account setup and a real invocation succeed.</p></div>
+            <span className="workflow-pill"><i /> Specialist responsibilities</span>
           </div>
           <div className="agent-flow">
             {agents.map((agent, index) => (
