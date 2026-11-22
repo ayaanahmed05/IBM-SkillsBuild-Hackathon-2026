@@ -42,7 +42,7 @@ def create_app(settings=None):
         await asyncio.gather(task,*tasks,return_exceptions=True)
         rt.store.engine.dispose()
 
-    app=FastAPI(title='FanFlow MomentGuard',lifespan=lifespan)
+    app=FastAPI(title='MomentGuard AI',version='2.0.0',description='Explainable fan-centric stadium decision POC with simulated data.',lifespan=lifespan)
     app.state.runtime=rt
     app.add_middleware(CORSMiddleware,allow_origins=list({settings.frontend_origin, 'http://127.0.0.1:5173'} if settings.frontend_origin=='http://localhost:5173' else {settings.frontend_origin}),allow_methods=['GET','POST'],allow_headers=['Content-Type','Authorization'])
 
@@ -63,7 +63,7 @@ def create_app(settings=None):
 
     @app.get('/api/health')
     async def health():
-        return dict(ok=True,service='FanFlow MomentGuard API',mode='simulated-data')
+        return dict(ok=True,service='MomentGuard AI API',mode='simulated-data')
 
     @app.get('/api/state',response_model=Snapshot)
     async def state():
@@ -187,7 +187,7 @@ def create_app(settings=None):
 
     @app.get('/api/agents')
     async def agents():
-        return {'status':'unverified','ibmConfigured':False,'traces':rt.traces}
+        return {'status':'integration-ready-unverified','ibmConfigured':False,'executionClaimed':False,'candidateArtifacts':['game_intelligence','momentguard_coordinator','calculate_moment_risk'],'traces':rt.traces}
 
     @app.websocket('/ws/live')
     async def live(ws:WebSocket):

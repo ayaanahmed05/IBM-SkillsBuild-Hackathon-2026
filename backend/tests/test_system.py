@@ -18,7 +18,7 @@ def post(c,path,body=None):
     return response.json()
 
 def test_legacy_contract(client):
-    assert client.get('/api/health').json()=={'ok':True,'service':'FanFlow MomentGuard API','mode':'simulated-data'}
+    assert client.get('/api/health').json()=={'ok':True,'service':'MomentGuard AI API','mode':'simulated-data'}
     s=client.get('/api/state').json()
     assert {'state','recommendation','updatedAt'}<=s.keys()
     assert {'scenario','trip','scoreA','scoreB','clock','gameState','momentIntensity','availableWindowMinutes'}<=s['state'].keys()
@@ -155,3 +155,24 @@ def test_concurrent_mutations_have_unique_event_versions(client):
     events=client.get('/api/events').json()
     versions=[e['stateVersion'] for e in events]
     assert versions==sorted(set(versions))
+
+def test_explainable_risk_and_delivery_alternative(client):
+    critical=client.get('/api/state').json()['recommendation']
+    assert critical['riskScore']>=75
+    assert critical['riskBreakdown']
+    assert sum(item['points'] for item in critical['riskBreakdown'])>=critical['riskScore']
+    post(client,'preferences',{'accessible':False,'delivery':True,'speed':72})
+    rec=client.get('/api/state').json()['recommendation']
+    assert rec['bestAlternative']['type']=='delivery'
+    assert rec['recommendedMode']=='delivery'
+    assert rec['bestAlternative']['facility']=='food-north'
+
+
+def test_crowdflow_experiment_has_distinct_measurable_story():
+    result=experiment(42,30)
+    assert result['scorecard']['unsafeDeparturesAvoided']>0
+    assert result['scorecard']['highRiskMinutesAvoided']>0
+    assert result['scorecard']['crowdPeakConcentrationReductionPct']>0
+    before=result['scorecard']['crowdPeakConcentrationBeforePct']
+    after=result['scorecard']['crowdPeakConcentrationAfterPct']
+    assert after<before

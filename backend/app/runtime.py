@@ -42,7 +42,7 @@ class Runtime:
     def snapshot(self):
         rec=self.recommendation()
         state={**self.game,'clock':f"Q{self.game['quarter']} · {int(self.game['clockSeconds'])//60}:{int(self.game['clockSeconds'])%60:02d}",'need':self.fan.need,'venue':'Northstar Arena','dataMode':'SIMULATED','trip':rec['tripEstimate'],'fanAwayFromSeat': self.fan.position!=self.fan.seat}
-        return deepcopy(dict(state=state,recommendation=rec,updatedAt=now(),sessionId=self.session,stateVersion=self.version,facilities=self.facilities,routeConnections=[{'from':a,'to':b,**d} for a,b,d in self.graph.edges(data=True)],fan=self.fan.model_dump(),fans=[f.model_dump() for f in self.fans.values()],orders=self.orders,agents=self.traces[-30:],automatic=self.auto,provenance={'game':{'kind':'Simulated','source':'Seeded MomentGuard provider'},'venue':{'kind':'Simulated','source':'Fictional Northstar Arena'},'ibm':'Not configured; deterministic fallback'}))
+        return deepcopy(dict(state=state,recommendation=rec,updatedAt=now(),sessionId=self.session,stateVersion=self.version,facilities=self.facilities,routeConnections=[{'from':a,'to':b,**d} for a,b,d in self.graph.edges(data=True)],fan=self.fan.model_dump(),fans=[f.model_dump() for f in self.fans.values()],orders=self.orders,agents=self.traces[-30:],automatic=self.auto,provenance={'game':{'kind':'Simulated','source':'Seeded MomentGuard provider'},'venue':{'kind':'Simulated','source':'Fictional Northstar Arena'},'ibm':{'status':'integration-ready-unverified','executionClaimed':False,'source':'Candidate watsonx Orchestrate artifacts; deterministic safety fallback remains authoritative'}}))
 
     def emit(self, event_type, details=None):
         self.version+=1

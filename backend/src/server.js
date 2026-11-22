@@ -17,7 +17,7 @@ function snapshot() {
   return { state, recommendation: decide(state), updatedAt: new Date().toISOString() };
 }
 
-app.get("/api/health", (_req, res) => res.json({ ok: true, service: "FanFlow MomentGuard API", mode: "simulated-data" }));
+app.get("/api/health", (_req, res) => res.json({ ok: true, service: "MomentGuard AI API", mode: "simulated-data" }));
 app.get("/api/state", (_req, res) => res.json(snapshot()));
 
 app.post("/api/scenario", (req, res) => {

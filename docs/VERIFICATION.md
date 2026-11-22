@@ -1,11 +1,11 @@
-# Verification executed in this workspace
+# Verification executed for the upgraded build
 
-- Python 3.13.13 local virtual environment; dependency freeze is backend/requirements.lock. Docker targets Python 3.11; that container runtime has not been exercised.
-- `cd backend && .venv/bin/python -m pytest -q`: 18 passed. One upstream Starlette/httpx deprecation warning; no test failures.
-- `cd frontend && npm run build`: passed, Vite 6.4.4; original design stylesheet retained with additional runtime control styles.
-- `git diff --check`: passed.
-- `docker compose config --quiet`: passed. Docker daemon socket is absent, so no container startup claim.
-- Seed 42, 30-fan experiment CLI executed. It exports the underlying trip calculation records and policy metrics. MomentGuard and CrowdFlow produced equal outcomes in this seed: there is no demonstrated incremental CrowdFlow benefit here. Different numbers of completed trips make raw totals insufficient to claim improvements.
-- Native Chrome loaded the running dashboard at 127.0.0.1:5173 and displayed backend score 106–105, risk score 96, STAY and SIMULATED · CONNECTED. This exposed and led to a fix for the loopback Origin mismatch.
-- Automatic approval review rejected subsequent Google Chrome interaction. Further browser click-through testing was not performed. API/WebSocket tests exercise the trip and state transitions instead.
-- No IBM account credentials, ADK environment or callable service connector were available. Injected transport tests verify local failure guards; they are not real IBM service tests. No IBM cloud execution, Granite inference, deployment or Bob session evidence exists from this work.
+- `cd backend && python -m pytest -q`: **20 passed**.
+- New tests cover explainable Moment Risk, safety-aware delivery and differentiated CrowdFlow results.
+- Seed 42 / 30-fan experiment executed. Scorecard: 19 unsafe departures avoided, 7.33 simulated high-risk exposure minutes avoided, and peak food-concession concentration reduced from 100% to 50% in the longer demand-balancing wave.
+- Every experiment result is labelled simulated and returns the underlying trip records and methodology.
+- `tsc --jsx react --allowJs --noEmit --skipLibCheck --noResolve src/main.jsx`: JSX syntax parsed successfully.
+- CSS and JSX delimiter sanity checks passed.
+- A full Vite build was attempted after extracting the repository. The environment could not download locked npm packages because registry access returned `EAI_AGAIN`; therefore no new production-build claim is made here.
+- The Docker path is now a multi-stage Vite → Nginx build with API/WebSocket reverse proxy and security headers; actual container startup was not executed in this workspace.
+- No IBM account credentials or callable service connector were available. The repository includes IBM-ready artifacts and honest status surfaces, but **no IBM cloud execution, Granite inference or IBM Bob session is claimed**.

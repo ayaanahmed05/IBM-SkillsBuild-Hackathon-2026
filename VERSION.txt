@@ -1,0 +1,6 @@
+MomentGuard AI competition build
+Version: 2.0.0
+Prepared: 2026-11-20
+Theme: IBM Carbon-inspired fan-centric sports experience
+Data: simulated POC only
+IBM cloud execution: not claimed until verified by the team

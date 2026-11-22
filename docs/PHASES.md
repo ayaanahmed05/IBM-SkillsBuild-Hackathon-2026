@@ -2,18 +2,18 @@
 
 | Phase | Implemented | Remaining / qualification |
 |---|---|---|
-| 1 | Source audit, modular FastAPI, original routes, CORS/proxy, environment, regression tests | Response keys retained with documented deliberate safety corrections; Node reference retained |
-| 2 | Single runtime, game/pause clock, scores/possession context, seed scenarios, graph venue, fan/trip state, immutable-by-application event records, manual/automatic controls | Rich significant-event/score generator, spatial occupancy and crash recovery |
-| 3 | Versioned snapshot-bearing events, WebSocket heartbeat/reconnect, immediate UI changes | Larger-scale backpressure/load testing |
-| 4 | Deterministic risk, routing, queue/service/buffer, accessible eligibility and four actions | More detailed waypoint progress and safe-window forecasting |
-| 5 | Official IBM docs reviewed; hosted typed Python tool and coordinator/specialist definition generator | Account capability verification, ADK validation/import, real delegation/tool proof, API transport, Granite entitlement, three further specialists |
-| 6 | Nonblocking evaluation boundary, material/manual triggers, timeout/error/stale/unsafe validation, persisted local fallback traces | Wire actual verified IBM transport and persist its full real tool traces; debounce/backoff |
-| 7 | Multi-fan records, demand-aware proposed assignments, spike/closure/reroute controls | Execute distributed plans as a batch, measure capacity shared across active trips, realistic congestion dynamics |
-| 8 | Simulated catalog, prices, explicit confirmation, pickup/delivery timer, cancellation, trip phases | More items, per-fan ownership, order-linked trip orchestration |
-| 9 | Provider protocols and simulated adapters; explicit provenance | Actual external provider intentionally absent; adapters not yet injected into runtime |
-| 10 | Persisted runtime phase measurements; deterministic cohort estimate and repeatable command | Full dynamic matched-policy experiments, moment counts/protected comparison, utilization timeseries and richer measured metrics |
-| 11 | Existing visual styling retained; API/WS, reasons/options, trip/order/trace/analytics controls | Richer multi-fan UI, accessible route drawing, automated browser regression suite |
-| 12 | Executed Pytest and production build; manual browser check | Actual IBM tests, container run and larger concurrency/load testing |
-| 13 | Audit, architecture/setup/API/config/limits/provenance/demo and honest IBM/Bob status | Real IBM trace and Bob evidence require actual tools/accounts |
+| 1 | Modular FastAPI, validated API, CORS/proxy, environment and regression suite | Node reference remains only for audit history |
+| 2 | Single runtime, game clock, scores/possession context, seed scenarios, graph venue, fan/trip state and event records | Rich live sports feed/provider and crash recovery are intentionally outside the offline POC |
+| 3 | Versioned snapshot events, WebSocket heartbeat/reconnect and immediate UI changes | Larger-scale backpressure/load testing |
+| 4 | Explainable Moment Risk, routing, queue/service/buffer, accessibility and GO/WAIT/STAY/RETURN | Calibrated real-world prediction would require licensed/validated live data |
+| 5 | IBM docs reviewed; candidate hosted typed tool and coordinator/specialist generator | Account verification, ADK import, real delegation/tool proof and Granite entitlement |
+| 6 | Nonblocking evaluation boundary, timeout/error/stale/unsafe validation and fallback traces | Wire a verified IBM transport only after real account proof |
+| 7 | Multi-fan records, distinct CrowdFlow demand-aware assignments, closure/reroute controls and two-wave cohort experiment | Dynamic full-stadium capacity model and batch trip execution |
+| 8 | Simulated catalog, explicit confirmation, pickup/delivery timer, cancellation and safety-aware seat-delivery recommendation | Real POS/payment integration intentionally absent |
+| 9 | Provider protocols, simulated adapters and explicit provenance | External game/venue provider intentionally absent |
+| 10 | Runtime measurements plus reproducible safety and crowd-distribution experiments | Real-world trial data, calibration and statistical validation |
+| 11 | IBM Carbon-inspired responsive UI, decision-first hierarchy, animated SVG route, accessibility state, Venue Intelligence and hidden Judge mode | Automated browser regression suite |
+| 12 | 20 backend tests and JSX parse verification | Fresh Vite production build blocked in this workspace by npm registry `EAI_AGAIN`; container startup not executed |
+| 13 | Challenge alignment, demo script, audit trail, production Nginx container path and honest IBM/Bob status | Genuine IBM Bob and watsonx Orchestrate evidence must be captured by the team before submission |
 
-The full thirteen-phase definition of done is not claimed. Offline end-to-end functionality is the delivered milestone. Cloud integration and the remaining measured simulation sophistication remain visible work.
+The offline POC is complete enough for a polished competition demo. Cloud claims remain intentionally gated on genuine IBM account evidence.
