@@ -43,3 +43,14 @@
 - Seed 42 / 30-fan scorecard: 19 unsafe departures avoided, 7.33 simulated high-risk minutes avoided, peak food-concession concentration 100% → 50%.
 - Full Vite production build could not be rerun in this environment because npm registry package downloads were unavailable (`EAI_AGAIN`). The locked package files are preserved for normal `npm ci && npm run build` in a connected environment.
 - No genuine IBM Bob or watsonx Orchestrate execution is claimed. Those are still required submission evidence.
+
+
+## v2.1 Proof Center upgrade
+
+- Added `GET /api/proof` with live game/fan inputs, Moment Risk evidence, selected and rejected alternatives, safe-window justification, accessibility checks, decision assurance and honest IBM execution state.
+- Added `GET /api/evaluation` with a computed 100-scenario deterministic evaluation suite.
+- Added Judge Mode tabs for Proof Center, Evaluation Lab and Demo Controls.
+- Added baseline vs MomentGuard vs CrowdFlow comparison inside the Proof Center.
+- Added safe-failure evidence: when a safe departure cannot be supported, the engine defers rather than fabricating a GO.
+- Added Windows-safe `uvloop` marker in `requirements.lock`.
+- Backend regression suite increased to 24 passing tests.

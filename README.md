@@ -16,6 +16,8 @@ All game, venue, ordering and experiment data in this repository is simulated. N
 - CrowdFlow predicts group demand and spreads fans across eligible concessions.
 - Venue Intelligence provides an operator/buyer story in addition to the fan experience.
 - Every experiment metric is reproducible and explicitly labelled simulated.
+- Judge Mode includes a Proof Center with live decision evidence, rejected alternatives, accessibility checks and IBM execution status.
+- Evaluation Lab executes 100 deterministic scenarios against the same decision engine used by the app.
 
 See `docs/CHALLENGE_ALIGNMENT.md` and `docs/DEMO_SCRIPT.md` before submission.
 
@@ -41,6 +43,34 @@ npm run dev
 
 Open `http://localhost:5173`.
 
+## Windows / VS Code quick start
+
+From the repository root in PowerShell:
+
+```powershell
+python -m venv .\backend\.venv
+.\backend\.venv\Scripts\Activate.ps1
+python -m pip install -r .\backend\requirements.lock
+cd backend
+python -m uvicorn app.main:app --host 127.0.0.1 --port 4000
+```
+
+The lock file now marks `uvloop` as non-Windows so it no longer blocks installation on Windows. In a second terminal:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173`.
+
+## Proof Center and Evaluation Lab
+
+Turn on **Judge mode** in the top navigation. The default **Proof Center** displays the same live inputs and recommendation used by the fan experience, including the risk breakdown, safe-window evidence, selected and rejected alternatives, accessibility eligibility, decision assurance and IBM execution status. The **Evaluation Lab** executes 100 deterministic scenarios: 30 high-risk states, 30 safe-window cases, 20 queue disruptions, 10 accessibility cases and 10 facility-closure cases. Results are computed, not hard-coded.
+
+IBM execution remains explicitly **unverified** until a real watsonx/Granite/Orchestrate trace is captured from the team's provisioned account.
+
 ## Production-style Docker demo
 
 ```bash
@@ -60,7 +90,7 @@ npm ci
 npm run build
 ```
 
-Current backend result in the upgrade workspace: **20 passed**.
+Current backend result in the upgrade workspace: **24 passed**. The Judge Evaluation Lab also recomputes **100 deterministic scenarios** at runtime.
 
 ## Reproducible simulated POC story
 
@@ -94,6 +124,8 @@ Before submission, the team should complete one genuine IBM Bob task and one gen
 - `GET /api/crowdflow` — demand-aware fan assignment
 - `GET /api/experiments?seed=42&fans=30` — reproducible two-wave simulation
 - `GET /api/events` and `/api/analytics` — auditable runtime evidence
+- `GET /api/proof` — live judge-facing decision trace, alternatives, accessibility evidence and IBM execution status
+- `GET /api/evaluation` — executable 100-scenario POC evaluation suite
 - `GET /api/agents` — honest IBM integration status and traces
 - `WS /ws/live` — versioned real-time snapshots
 

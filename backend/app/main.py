@@ -12,6 +12,8 @@ from .runtime import Runtime, now
 from .models import ScenarioInput, NeedInput, Preferences, FacilityChange, Tick, Auto, OrderInput, Fan, Snapshot
 from .engine import CATALOG
 from .analytics import summarize, experiment, assignments
+from .evaluation import evaluation_suite
+from .proof import build_proof
 from .agents import evaluate
 
 
@@ -42,7 +44,7 @@ def create_app(settings=None):
         await asyncio.gather(task,*tasks,return_exceptions=True)
         rt.store.engine.dispose()
 
-    app=FastAPI(title='MomentGuard AI',version='2.0.0',description='Explainable fan-centric stadium decision POC with simulated data.',lifespan=lifespan)
+    app=FastAPI(title='MomentGuard AI',version='2.1.0',description='Explainable fan-centric stadium decision POC with simulated data.',lifespan=lifespan)
     app.state.runtime=rt
     app.add_middleware(CORSMiddleware,allow_origins=list({settings.frontend_origin, 'http://127.0.0.1:5173'} if settings.frontend_origin=='http://localhost:5173' else {settings.frontend_origin}),allow_methods=['GET','POST'],allow_headers=['Content-Type','Authorization'])
 
@@ -185,9 +187,20 @@ def create_app(settings=None):
         rt.store.append(dict(type='experiment',timestamp=now(),sessionId=rt.session,stateVersion=rt.version,payload=result))
         return result
 
+    @app.get('/api/proof')
+    async def proof():
+        return build_proof(rt)
+
+    @app.get('/api/evaluation')
+    async def evaluation():
+        result=evaluation_suite()
+        rt.store.append(dict(type='evaluation',timestamp=now(),sessionId=rt.session,stateVersion=rt.version,payload={k:v for k,v in result.items() if k!='cases'}))
+        return result
+
     @app.get('/api/agents')
     async def agents():
-        return {'status':'integration-ready-unverified','ibmConfigured':False,'executionClaimed':False,'candidateArtifacts':['game_intelligence','momentguard_coordinator','calculate_moment_risk'],'traces':rt.traces}
+        verified=any(t.get('success') and str(t.get('provider','')).lower().startswith(('ibm','watsonx')) for t in rt.traces)
+        return {'status':'verified-runtime' if verified else 'integration-ready-unverified','ibmConfigured':verified,'executionClaimed':verified,'candidateArtifacts':['game_intelligence','momentguard_coordinator','calculate_moment_risk'],'traces':rt.traces}
 
     @app.websocket('/ws/live')
     async def live(ws:WebSocket):

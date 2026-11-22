@@ -20,8 +20,10 @@
 4. Start trip.
 5. Play resumed → RETURN NOW / Moment Recovery.
 6. Accessible routing → eligibility changes.
-7. Venue Intelligence → show CrowdFlow 100% → 50% peak food concentration result.
-8. IBM architecture → show genuine Bob / Orchestrate evidence.
+7. Open Judge Mode → Proof Center: show live inputs, rejected alternatives and accessibility evidence.
+8. Evaluation Lab → rerun the 100-scenario suite and show computed pass/fail totals.
+9. Venue Intelligence → show CrowdFlow 100% → 50% peak food concentration result.
+10. IBM architecture → show genuine Bob / Orchestrate evidence.
 
 ## Do not say
 

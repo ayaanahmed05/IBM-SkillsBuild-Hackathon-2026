@@ -168,6 +168,151 @@ function ImpactCard({ analytics }) {
   );
 }
 
+
+function ProofCenter({ proof, analytics, onRefresh }) {
+  if (!proof) return <div className="loading-card">Building live decision evidence…</div>;
+  const final = proof.finalDecision || {};
+  const ibm = proof.ibmExecution || {};
+  const safety = analytics?.waves?.safety;
+  const crowd = analytics?.waves?.crowd;
+  function foodPeakPct(metrics) {
+    const counts = metrics?.facilityUtilization || {};
+    const north = Number(counts["food-north"] || 0);
+    const south = Number(counts["food-south"] || 0);
+    const total = north + south;
+    return total ? Math.round(Math.max(north, south) / total * 100) : 0;
+  }
+  const benchmarkRows = [
+    ["Without MomentGuard", safety?.baseline?.metrics, crowd?.baseline?.metrics],
+    ["With MomentGuard", safety?.momentguard?.metrics, crowd?.momentguard?.metrics],
+    ["MomentGuard + CrowdFlow", safety?.crowdflow?.metrics, crowd?.crowdflow?.metrics],
+  ];
+
+  return (
+    <div className="proof-center" id="proof-center">
+      <div className="proof-hero">
+        <div>
+          <span className="kicker">MOMENTGUARD PROOF CENTER</span>
+          <h3>See exactly why this decision was made.</h3>
+          <p>Live inputs, deterministic calculations, rejected alternatives, accessibility checks, IBM execution status and reproducible benchmarks in one judge-facing evidence layer.</p>
+        </div>
+        <button className="secondary-button" onClick={onRefresh}>Refresh evidence</button>
+      </div>
+
+      <div className="proof-grid">
+        <article className="proof-card trace-card">
+          <div className="proof-card-head"><span>01</span><div><small>LIVE INPUT</small><h4>Game + fan request</h4></div></div>
+          <div className="proof-scoreline"><strong>{proof.game?.score}</strong><span>Q{proof.game?.quarter} · {Math.floor((proof.game?.clockSeconds || 0)/60)}:{String((proof.game?.clockSeconds || 0)%60).padStart(2,"0")}</span></div>
+          <div className="evidence-kv"><span>Need</span><strong>{proof.request?.need}</strong></div>
+          <div className="evidence-kv"><span>Safe window</span><strong>{fmtMinutes(proof.game?.availableWindowMinutes)}</strong></div>
+          <div className="evidence-kv"><span>Accessible profile</span><strong>{proof.request?.accessible ? "ON" : "OFF"}</strong></div>
+          <div className="evidence-kv"><span>Seat delivery</span><strong>{proof.request?.seatDelivery ? "ON" : "OFF"}</strong></div>
+        </article>
+
+        <article className="proof-card trace-card">
+          <div className="proof-card-head"><span>02</span><div><small>GAME INTELLIGENCE</small><h4>Explainable Moment Risk</h4></div></div>
+          <div className="proof-risk"><strong>{proof.risk?.score}</strong><span>/100</span></div>
+          <div className="mini-risk-list">
+            {(proof.risk?.breakdown || []).slice(0, 6).map((item, index) => (
+              <div key={`${item.label}-${index}`}><span>{item.label}</span><b>{item.points > 0 ? "+" : ""}{item.points}</b></div>
+            ))}
+          </div>
+          <small className="proof-note">{proof.risk?.scale}</small>
+        </article>
+
+        <article className="proof-card final-proof-card">
+          <div className="proof-card-head"><span>03</span><div><small>FINAL DECISION</small><h4>{final.action}</h4></div></div>
+          <div className={`proof-action action-${String(final.action || "WAIT").toLowerCase()}`}>{final.action}</div>
+          <strong className="proof-title">{final.title}</strong>
+          <p>{final.reason}</p>
+          <div className="assurance-row"><span>DECISION ASSURANCE</span><strong>{final.assurance}</strong></div>
+          <small>{final.assuranceReason}</small>
+        </article>
+      </div>
+
+      <article className="proof-section-card">
+        <div className="surface-heading"><div><span className="kicker">WHY THIS · WHY NOT?</span><h3>Options evaluated</h3></div><span className="pill neutral">LIVE ENGINE OUTPUT</span></div>
+        <div className="option-evidence-list">
+          {(proof.options || []).map((option, index) => (
+            <details className={option.selected ? "option-proof selected" : "option-proof"} key={`${option.destination}-${index}`} open={option.selected}>
+              <summary>
+                <span className={option.selected ? "proof-check selected" : "proof-check"}>{option.selected ? "✓" : "×"}</span>
+                <div><strong>{option.name}</strong><small>{option.delivery ? `Seat delivery · ETA ${fmtMinutes(option.roundTripMinutes)}` : `Round trip ${fmtMinutes(option.roundTripMinutes)}`}</small></div>
+                <b>{option.decision}</b>
+              </summary>
+              <p>{option.why}</p>
+            </details>
+          ))}
+        </div>
+        {proof.whyNotLeaveNow && <div className="why-not-callout"><span>WHY NOT LEAVE NOW?</span><p>{proof.whyNotLeaveNow}</p></div>}
+      </article>
+
+      <div className="proof-two-col">
+        <article className="proof-section-card">
+          <div className="surface-heading"><div><span className="kicker">ACCESSIBILITY EVIDENCE</span><h3>Preferences change eligibility</h3></div><span className={proof.accessibility?.enabled ? "pill live" : "pill neutral"}>{proof.accessibility?.enabled ? "ACTIVE" : "STANDARD"}</span></div>
+          <div className="access-proof-list">
+            {(proof.accessibility?.checks || []).map((check) => (
+              <div className={check.eligible ? "access-proof eligible" : "access-proof rejected"} key={check.facility}>
+                <span>{check.eligible ? "✓" : "×"}</span><div><strong>{check.name}</strong><small>{check.why}</small></div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="proof-section-card ibm-runtime-card">
+          <div className="surface-heading"><div><span className="kicker">IBM AI EXECUTION</span><h3>{ibm.verified ? "Verified runtime trace" : "Integration status"}</h3></div><span className={ibm.verified ? "pill live" : "pill warning"}>{ibm.verified ? "VERIFIED" : "UNVERIFIED"}</span></div>
+          <div className="ibm-trace">
+            {(ibm.steps || []).map((step, index) => (
+              <div className={`ibm-step ${step.status}`} key={`${step.label}-${index}`}><span>{step.status === "verified" || step.status === "local" ? "✓" : "○"}</span><strong>{step.label}</strong><small>{step.status.toUpperCase()}</small></div>
+            ))}
+          </div>
+          {ibm.latencyMs !== null && ibm.latencyMs !== undefined && <div className="evidence-kv"><span>Runtime latency</span><strong>{ibm.latencyMs} ms</strong></div>}
+          {!ibm.verified && <p className="truth-callout">{ibm.note}</p>}
+        </article>
+      </div>
+
+      <article className="proof-section-card benchmark-card">
+        <div className="surface-heading"><div><span className="kicker">SIMULATED POC RESULTS</span><h3>Baseline vs MomentGuard vs CrowdFlow</h3></div><span className="pill neutral">SEED 42 · 30 FANS</span></div>
+        <p className="proof-disclaimer">Reproducible prototype simulation only. These are not real-world stadium performance claims.</p>
+        <div className="benchmark-table" role="table" aria-label="MomentGuard benchmark comparison">
+          <div className="benchmark-row header"><span>Policy</span><span>Unsafe departures</span><span>High-risk exposure</span><span>Peak food load</span></div>
+          {benchmarkRows.map(([label, safetyMetrics, crowdMetrics]) => (
+            <div className="benchmark-row" key={label}><strong>{label}</strong><span>{safetyMetrics?.safetyViolations ?? "—"}</span><span>{safetyMetrics ? `${safetyMetrics.importantMomentExposureMinutes} min` : "—"}</span><span>{crowdMetrics ? `${foodPeakPct(crowdMetrics)}%` : "—"}</span></div>
+          ))}
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function EvaluationLab({ evaluation, onRun }) {
+  if (!evaluation) return <div className="loading-card">Preparing the 100-scenario evaluation suite…</div>;
+  return (
+    <div className="evaluation-lab">
+      <div className="evaluation-hero">
+        <div><span className="kicker">MOMENTGUARD EVALUATION LAB</span><h3>{evaluation.passed} / {evaluation.total} scenarios passed</h3><p>Every score below is generated by executable scenarios against the same decision engine used by the app.</p></div>
+        <div className="evaluation-score"><strong>{evaluation.passRatePct}%</strong><span>PASS RATE</span></div>
+        <button className="secondary-button" onClick={onRun}>Run suite again</button>
+      </div>
+      <div className="evaluation-grid">
+        {(evaluation.categories || []).map((category) => (
+          <article className="evaluation-card" key={category.id}>
+            <span>{category.label}</span><strong>{category.passed}<small>/{category.total}</small></strong>
+            <div className="evaluation-bar"><span style={{ width: `${category.total ? category.passed / category.total * 100 : 0}%` }} /></div>
+          </article>
+        ))}
+      </div>
+      <div className="evaluation-method">
+        <div><span>SAFE FAILURE</span><strong>{evaluation.failed === 0 ? "No evaluation failures" : `${evaluation.failed} scenario failures`}</strong><p>GO is never forced when route, accessibility, facility availability or safe-window evidence is insufficient.</p></div>
+        <div><span>CLAIM BOUNDARY</span><strong>POC validation, not field performance</strong><p>{evaluation.label}</p></div>
+      </div>
+      {evaluation.failures?.length > 0 && (
+        <div className="failure-list"><strong>Failures to inspect</strong>{evaluation.failures.map((failure) => <div key={failure.id}><span>{failure.id}</span><p>{failure.expectation}</p><b>{failure.observed}</b></div>)}</div>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [theme, setTheme] = useState("dark");
   const [snapshot, setSnapshot] = useState(null);
@@ -176,6 +321,9 @@ function App() {
   const [analytics, setAnalytics] = useState(null);
   const [history, setHistory] = useState([]);
   const [judgeMode, setJudgeMode] = useState(false);
+  const [judgeTab, setJudgeTab] = useState("proof");
+  const [proof, setProof] = useState(null);
+  const [evaluation, setEvaluation] = useState(null);
   const version = useRef(-1);
   const session = useRef(null);
   const retiredSessions = useRef(new Set());
@@ -253,6 +401,12 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!judgeMode || !snapshot?.stateVersion) return;
+    const timer = setTimeout(() => { refreshProof(); }, 80);
+    return () => clearTimeout(timer);
+  }, [judgeMode, snapshot?.stateVersion]);
+
   const rec = snapshot?.recommendation;
   const state = snapshot?.state;
   const fan = snapshot?.fan;
@@ -296,6 +450,25 @@ function App() {
     request("orders", { facility, item: "burger", quantity: 1, mode: "delivery", confirmed: true });
   }
 
+  async function refreshProof() {
+    const data = await request("proof");
+    if (data) setProof(data);
+  }
+
+  async function runEvaluation() {
+    const data = await request("evaluation");
+    if (data) setEvaluation(data);
+  }
+
+  function toggleJudgeMode() {
+    const next = !judgeMode;
+    setJudgeMode(next);
+    if (next) {
+      refreshProof();
+      runEvaluation();
+    }
+  }
+
   return (
     <div className={`app theme-${theme}`}>
       <header className="topbar">
@@ -307,10 +480,11 @@ function App() {
           <a href="#overview">Fan experience</a>
           <a href="#venue-intelligence">Venue intelligence</a>
           <a href="#technology">IBM architecture</a>
+          {judgeMode && <a href="#proof-center">Proof center</a>}
         </nav>
         <div className="top-actions">
           <span className={connected ? "connection live" : "connection"}><i />{connected ? "LIVE SIMULATION" : "RECONNECTING"}</span>
-          <button className={judgeMode ? "ghost-button active" : "ghost-button"} onClick={() => setJudgeMode(!judgeMode)}>Judge mode</button>
+          <button className={judgeMode ? "ghost-button active" : "ghost-button"} onClick={toggleJudgeMode}>Judge mode</button>
           <button className="icon-button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle theme">{theme === "dark" ? "☼" : "☾"}</button>
         </div>
       </header>
@@ -455,23 +629,35 @@ function App() {
 
         {judgeMode && (
           <section className="judge-panel">
-            <div className="surface-heading"><div><span className="kicker">JUDGE DEMO CONTROLS</span><h3>Run the 90-second story</h3></div><button className="ghost-button" onClick={() => request("reset", {})}>Reset demo</button></div>
-            <div className="scenario-controls">
-              {scenarios.map(([key, label, helper]) => <button key={key} className={state?.scenario === key ? "scenario-control active" : "scenario-control"} onClick={() => request("scenario", { scenario: key })}><strong>{label}</strong><small>{helper}</small></button>)}
+            <div className="surface-heading judge-heading"><div><span className="kicker">JUDGE MODE</span><h3>Evidence before claims.</h3></div><button className="ghost-button" onClick={() => request("reset", {}).then(() => refreshProof())}>Reset demo</button></div>
+            <div className="judge-tabs" role="tablist" aria-label="Judge mode sections">
+              <button className={judgeTab === "proof" ? "active" : ""} onClick={() => { setJudgeTab("proof"); refreshProof(); }}>Proof Center</button>
+              <button className={judgeTab === "evaluation" ? "active" : ""} onClick={() => { setJudgeTab("evaluation"); runEvaluation(); }}>Evaluation Lab</button>
+              <button className={judgeTab === "demo" ? "active" : ""} onClick={() => setJudgeTab("demo")}>Demo Controls</button>
             </div>
-            <div className="judge-actions">
-              <button onClick={() => request("simulation/tick", { seconds: 30 })}>Advance 30 seconds</button>
-              <button onClick={() => request("simulation/auto", { enabled: !snapshot?.automatic })}>{snapshot?.automatic ? "Pause" : "Start"} auto progression</button>
-              {bestFacility && <button onClick={() => request(`facilities/${bestFacility.id}`, { queue: bestFacility.queue + 10 })}>Spike recommended queue</button>}
-              {bestFacility && <button onClick={() => request(`facilities/${bestFacility.id}`, { open: !bestFacility.open })}>{bestFacility.open ? "Close" : "Reopen"} destination</button>}
-              <button onClick={async () => { const data = await request("experiments?seed=42&fans=30"); if (data) setAnalytics(data); }}>Rerun 30-fan experiment</button>
-            </div>
-            <div className="judge-evidence">
-              <div><span>TRIP STATUS</span><strong>{fan?.trip?.status || "At seat"}</strong></div>
-              <div><span>DESTINATION</span><strong>{bestFacility?.name || "None"}</strong></div>
-              <div><span>STATE VERSION</span><strong>{snapshot?.stateVersion ?? "—"}</strong></div>
-              <div><span>AGENT TRACE</span><strong>{snapshot?.agents?.length ? `${snapshot.agents.length} recorded` : "Fallback only"}</strong></div>
-            </div>
+
+            {judgeTab === "proof" && <ProofCenter proof={proof} analytics={analytics} onRefresh={refreshProof} />}
+            {judgeTab === "evaluation" && <EvaluationLab evaluation={evaluation} onRun={runEvaluation} />}
+            {judgeTab === "demo" && (
+              <div className="demo-controls-panel">
+                <div className="scenario-controls">
+                  {scenarios.map(([key, label, helper]) => <button key={key} className={state?.scenario === key ? "scenario-control active" : "scenario-control"} onClick={() => request("scenario", { scenario: key }).then(() => refreshProof())}><strong>{label}</strong><small>{helper}</small></button>)}
+                </div>
+                <div className="judge-actions">
+                  <button onClick={() => request("simulation/tick", { seconds: 30 }).then(() => refreshProof())}>Advance 30 seconds</button>
+                  <button onClick={() => request("simulation/auto", { enabled: !snapshot?.automatic })}>{snapshot?.automatic ? "Pause" : "Start"} auto progression</button>
+                  {bestFacility && <button onClick={() => request(`facilities/${bestFacility.id}`, { queue: bestFacility.queue + 10 }).then(() => refreshProof())}>Spike recommended queue</button>}
+                  {bestFacility && <button onClick={() => request(`facilities/${bestFacility.id}`, { open: !bestFacility.open }).then(() => refreshProof())}>{bestFacility.open ? "Close" : "Reopen"} destination</button>}
+                  <button onClick={async () => { const data = await request("experiments?seed=42&fans=30"); if (data) setAnalytics(data); }}>Rerun 30-fan benchmark</button>
+                </div>
+                <div className="judge-evidence">
+                  <div><span>TRIP STATUS</span><strong>{fan?.trip?.status || "At seat"}</strong></div>
+                  <div><span>DESTINATION</span><strong>{bestFacility?.name || "None"}</strong></div>
+                  <div><span>STATE VERSION</span><strong>{snapshot?.stateVersion ?? "—"}</strong></div>
+                  <div><span>IBM TRACE</span><strong>{proof?.ibmExecution?.verified ? "Verified" : "Unverified · honest fallback"}</strong></div>
+                </div>
+              </div>
+            )}
           </section>
         )}
 

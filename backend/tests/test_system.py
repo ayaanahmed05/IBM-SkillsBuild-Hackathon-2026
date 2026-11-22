@@ -176,3 +176,38 @@ def test_crowdflow_experiment_has_distinct_measurable_story():
     before=result['scorecard']['crowdPeakConcentrationBeforePct']
     after=result['scorecard']['crowdPeakConcentrationAfterPct']
     assert after<before
+
+def test_proof_center_exposes_live_evidence(client):
+    proof=client.get('/api/proof').json()
+    assert proof['label']=='LIVE DECISION EVIDENCE'
+    assert proof['risk']['score']>=75
+    assert proof['finalDecision']['action']=='STAY'
+    assert proof['finalDecision']['assurance'] in {'HIGH','MEDIUM','CONSERVATIVE'}
+    assert proof['ibmExecution']['verified'] is False
+    assert proof['options']
+
+
+def test_proof_center_explains_accessibility_rejection(client):
+    post(client,'scenario',{'scenario':'steady'})
+    post(client,'need',{'need':'shop'})
+    post(client,'preferences',{'accessible':True,'delivery':False,'speed':72})
+    proof=client.get('/api/proof').json()
+    assert proof['finalDecision']['action']=='WAIT'
+    checks=proof['accessibility']['checks']
+    assert checks and checks[0]['eligible'] is False
+    assert 'accessible' in checks[0]['why'].lower() or 'eligible route' in checks[0]['why'].lower()
+
+
+def test_evaluation_lab_is_computed_and_100_cases(client):
+    result=client.get('/api/evaluation').json()
+    assert result['total']==100
+    assert result['passed']+result['failed']==100
+    assert sum(c['total'] for c in result['categories'])==100
+    assert len(result['cases'])==100
+    assert result['passRatePct']==round(result['passed'],1)
+
+
+def test_evaluation_categories_have_expected_sizes(client):
+    result=client.get('/api/evaluation').json()
+    sizes={c['id']:c['total'] for c in result['categories']}
+    assert sizes=={'highRisk':30,'safeWindow':30,'queueSpike':20,'accessibility':10,'facilityClosure':10}
