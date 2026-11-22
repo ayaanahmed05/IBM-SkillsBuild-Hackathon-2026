@@ -5,9 +5,10 @@
 - [ ] Run `npm ci && npm run build` on a connected machine.
 - [ ] Run `docker compose up --build` and click through the full demo once.
 - [ ] Complete one genuine IBM Bob development task and save evidence.
-- [ ] Import/validate the candidate watsonx Orchestrate artifacts in the team IBM account.
-- [ ] Execute coordinator → Game Intelligence → `calculate_moment_risk` and save a redacted real trace.
-- [ ] If Granite is available in the account, use the actual listed model ID and capture proof. Do not claim Granite if it is not invoked.
+- [ ] Configure `WATSONX_API_KEY`, `WATSONX_PROJECT_ID`, and an actual Granite `WATSONX_MODEL_ID` in `backend/.env`.
+- [ ] In Judge Mode → Proof Center, click **Run IBM Granite explanation** and confirm the IBM AI badge changes to **VERIFIED**.
+- [ ] Capture the verified model, latency, and Granite explanation in the final demo or documentation.
+- [ ] Keep watsonx Orchestrate artifacts as an optional future orchestration path; do not claim Orchestrate runtime unless it is actually executed.
 - [ ] Deploy a stable public prototype URL.
 - [ ] Record a 3-minute demo with at least 90 seconds of product interaction.
 - [ ] State that all game, venue and performance results shown in the POC are simulated.
@@ -23,13 +24,13 @@
 7. Open Judge Mode → Proof Center: show live inputs, rejected alternatives and accessibility evidence.
 8. Evaluation Lab → rerun the 100-scenario suite and show computed pass/fail totals.
 9. Venue Intelligence → show CrowdFlow 100% → 50% peak food concentration result.
-10. IBM architecture → show genuine Bob / Orchestrate evidence.
+10. IBM architecture → show genuine Bob evidence + a verified watsonx.ai / Granite runtime trace.
 
 ## Do not say
 
 - "Moment Risk is a probability."
 - "CrowdFlow will reduce congestion by 50% in real stadiums."
-- "IBM watsonx/Granite/Bob powers this build" unless the team has genuine execution evidence.
+- "IBM watsonx/Granite powers the runtime" unless Proof Center shows a genuine successful IBM Cloud trace. Bob use should be supported by the real team evidence files.
 - "This is live Raptors/Celtics data."
 
 ## Strong close

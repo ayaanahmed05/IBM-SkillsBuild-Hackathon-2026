@@ -475,3 +475,11 @@ footer > span { text-align: right; font-size: 10px; }
   .option-proof summary { grid-template-columns: 30px 1fr; }
   .option-proof summary > b { grid-column: 2; }
 }
+
+/* v2.2 IBM watsonx / Granite proof controls */
+.granite-explanation { margin-top: 14px; padding: 14px; border: 1px solid rgba(69,137,255,.45); background: rgba(15,98,254,.08); border-radius: 10px; }
+.granite-explanation span { display:block; font-size: 11px; letter-spacing: .12em; color: #78a9ff; font-weight: 700; margin-bottom: 6px; }
+.granite-explanation p { margin: 0; line-height: 1.55; }
+.ibm-action-row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:14px; }
+.ibm-action-row small { opacity:.75; max-width:360px; }
+.ibm-action-row button:disabled { opacity:.55; cursor:not-allowed; }

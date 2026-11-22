@@ -16,11 +16,13 @@ def _ibm_execution(runtime):
             'provider': latest.get('provider'),
             'latencyMs': latest.get('latencyMs'),
             'trace': latest,
+            'model': latest.get('model'),
+            'explanation': (latest.get('output') or {}).get('explanation'),
             'steps': [
-                {'label': 'MomentGuard Coordinator', 'status': 'verified'},
-                {'label': 'Game Intelligence Agent', 'status': 'verified'},
-                {'label': latest.get('tool') or 'MomentGuard tool', 'status': 'verified'},
-                {'label': 'Recommendation validated', 'status': 'verified'},
+                {'label': 'MomentGuard deterministic decision', 'status': 'local'},
+                {'label': 'IBM watsonx.ai / Granite', 'status': 'verified'},
+                {'label': latest.get('tool') or 'Granite explanation', 'status': 'verified'},
+                {'label': 'Safety authority remained deterministic', 'status': 'local'},
             ],
         }
     return {
@@ -33,10 +35,10 @@ def _ibm_execution(runtime):
             {'label': 'MomentGuard deterministic coordinator', 'status': 'local'},
             {'label': 'Game Intelligence calculation', 'status': 'local'},
             {'label': 'Venue routing and queue tools', 'status': 'local'},
-            {'label': 'watsonx Orchestrate / Granite', 'status': 'unverified'},
+            {'label': 'IBM watsonx.ai / Granite explanation', 'status': 'unverified'},
             {'label': 'Recommendation safety validation', 'status': 'local'},
         ],
-        'note': 'The POC intentionally does not label a local fallback as IBM execution. Replace this state with a captured verified trace after running the supplied IBM adapter in the team account.',
+        'note': 'No successful watsonx runtime trace is present yet. Configure backend/.env, then use the Proof Center button to run a real IBM Granite explanation. Local fallback is never mislabeled as IBM execution.',
     }
 
 

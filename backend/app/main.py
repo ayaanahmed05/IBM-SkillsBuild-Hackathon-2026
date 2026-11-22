@@ -15,6 +15,7 @@ from .analytics import summarize, experiment, assignments
 from .evaluation import evaluation_suite
 from .proof import build_proof
 from .agents import evaluate
+from .watsonx import configured as watsonx_configured, generate_granite_explanation
 
 
 def create_app(settings=None):
@@ -197,10 +198,80 @@ def create_app(settings=None):
         rt.store.append(dict(type='evaluation',timestamp=now(),sessionId=rt.session,stateVersion=rt.version,payload={k:v for k,v in result.items() if k!='cases'}))
         return result
 
+
+    @app.get('/api/ibm/status')
+    async def ibm_status():
+        return {
+            'configured': watsonx_configured(settings),
+            'provider': 'IBM watsonx.ai / Granite',
+            'model': settings.watsonx_model_id or None,
+            'projectConfigured': bool(settings.watsonx_project_id),
+            'url': settings.watsonx_url if watsonx_configured(settings) else None,
+            'decisionAuthority': 'MomentGuard deterministic safety engine',
+            'role': 'Explanation-only; IBM AI cannot override GO / WAIT / STAY / RETURN.',
+        }
+
+    @app.post('/api/ibm/explain')
+    async def ibm_explain():
+        snapshot = rt.snapshot()
+        if not watsonx_configured(settings):
+            raise HTTPException(503, 'IBM watsonx.ai is not configured. Add the WATSONX_* values to backend/.env and restart the API.')
+        started = now()
+        try:
+            result = await generate_granite_explanation(snapshot, settings)
+            trace = {
+                'agent': 'Granite Explanation Layer',
+                'provider': result['provider'],
+                'tool': 'watsonx text/chat',
+                'model': result['model'],
+                'timestamp': started,
+                'input': {
+                    'sessionId': snapshot['sessionId'],
+                    'stateVersion': snapshot['stateVersion'],
+                    'action': snapshot['recommendation']['action'],
+                    'destination': snapshot['recommendation']['destination'],
+                },
+                'output': {'explanation': result['explanation'], 'usage': result.get('usage')},
+                'success': True,
+                'safetyOverride': False,
+                'latencyMs': result['latencyMs'],
+                'summary': 'IBM Granite generated a grounded explanation after the deterministic decision was finalized.',
+            }
+        except Exception as exc:
+            trace = {
+                'agent': 'Granite Explanation Layer',
+                'provider': 'IBM watsonx.ai / Granite',
+                'tool': 'watsonx text/chat',
+                'model': settings.watsonx_model_id or None,
+                'timestamp': started,
+                'input': {'sessionId': snapshot['sessionId'], 'stateVersion': snapshot['stateVersion']},
+                'output': None,
+                'success': False,
+                'safetyOverride': False,
+                'latencyMs': None,
+                'summary': f'IBM Granite explanation failed safely: {type(exc).__name__}',
+            }
+            async with rt.lock:
+                rt.traces.append(trace)
+                rt.emit('agent_action', {'trace': trace})
+            raise HTTPException(502, 'IBM Granite explanation could not be generated. The deterministic MomentGuard decision remains active.')
+        async with rt.lock:
+            rt.traces.append(trace)
+            rt.emit('agent_action', {'trace': trace})
+        return {
+            'verified': True,
+            'explanation': result['explanation'],
+            'provider': result['provider'],
+            'model': result['model'],
+            'latencyMs': result['latencyMs'],
+            'decision': snapshot['recommendation']['action'],
+            'decisionChanged': False,
+        }
+
     @app.get('/api/agents')
     async def agents():
         verified=any(t.get('success') and str(t.get('provider','')).lower().startswith(('ibm','watsonx')) for t in rt.traces)
-        return {'status':'verified-runtime' if verified else 'integration-ready-unverified','ibmConfigured':verified,'executionClaimed':verified,'candidateArtifacts':['game_intelligence','momentguard_coordinator','calculate_moment_risk'],'traces':rt.traces}
+        return {'status':'verified-runtime' if verified else ('configured-ready' if watsonx_configured(settings) else 'integration-ready-unverified'),'ibmConfigured':watsonx_configured(settings),'executionClaimed':verified,'candidateArtifacts':['game_intelligence','momentguard_coordinator','calculate_moment_risk','granite_explanation'],'traces':rt.traces}
 
     @app.websocket('/ws/live')
     async def live(ws:WebSocket):

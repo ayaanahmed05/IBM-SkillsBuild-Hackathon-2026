@@ -4,7 +4,7 @@
 
 MomentGuard AI is a fan-centric sports and entertainment POC for IBM SkillsBuild. It combines simulated game context, venue flow, fan preferences, accessibility and explainable decision logic to tell a fan when to **GO, WAIT, STAY or RETURN NOW**. CrowdFlow extends the same concept to venue-level demand balancing.
 
-All game, venue, ordering and experiment data in this repository is simulated. No real sports feed, payment, IBM cloud execution or IBM Bob session is claimed.
+All game, venue, ordering and experiment data in this repository is simulated. IBM Bob evidence is preserved under `.bob/` and `bob_sessions/`. IBM watsonx.ai execution is claimed only after the app records a successful runtime trace from the team's configured IBM Cloud account.
 
 ## What makes the POC different
 
@@ -69,7 +69,20 @@ Open `http://localhost:5173`.
 
 Turn on **Judge mode** in the top navigation. The default **Proof Center** displays the same live inputs and recommendation used by the fan experience, including the risk breakdown, safe-window evidence, selected and rejected alternatives, accessibility eligibility, decision assurance and IBM execution status. The **Evaluation Lab** executes 100 deterministic scenarios: 30 high-risk states, 30 safe-window cases, 20 queue disruptions, 10 accessibility cases and 10 facility-closure cases. Results are computed, not hard-coded.
 
-IBM execution remains explicitly **unverified** until a real watsonx/Granite/Orchestrate trace is captured from the team's provisioned account.
+IBM execution remains explicitly **unverified** until a real watsonx.ai/Granite call succeeds. Configure the server-side `WATSONX_*` environment values, then use **Run IBM Granite explanation** inside Proof Center. A successful call changes the IBM evidence badge to **VERIFIED** and records model + latency + explanation.
+
+## IBM Cloud / Granite quick setup
+
+Create `backend/.env` from `backend/.env.example` and fill in the IBM values:
+
+```env
+WATSONX_API_KEY=...
+WATSONX_PROJECT_ID=...
+WATSONX_URL=https://us-south.ml.cloud.ibm.com
+WATSONX_MODEL_ID=...
+```
+
+Restart the backend, verify `GET /api/ibm/status` reports `configured: true`, then open **Judge Mode → Proof Center → Run IBM Granite explanation**. The UI will only show **VERIFIED** after a successful IBM Cloud response.
 
 ## Production-style Docker demo
 
@@ -90,7 +103,7 @@ npm ci
 npm run build
 ```
 
-Current backend result in the upgrade workspace: **24 passed**. The Judge Evaluation Lab also recomputes **100 deterministic scenarios** at runtime.
+Current backend result in the upgrade workspace is verified during release packaging. The Judge Evaluation Lab also recomputes **100 deterministic scenarios** at runtime.
 
 ## Reproducible simulated POC story
 
@@ -106,12 +119,15 @@ These are prototype simulation outputs, not real-world performance claims.
 
 The repository contains:
 
-- validated asynchronous agent adapter boundary with timeout/staleness/safety guards;
-- candidate watsonx Orchestrate definitions for `momentguard_coordinator` and `game_intelligence`;
-- candidate hosted `calculate_moment_risk` tool aligned to the new explainable heuristic;
-- explicit UI status that does not label unverified execution as IBM.
+- preserved IBM Bob project-specific agent context under `.bob/` plus session evidence under `bob_sessions/`;
+- a real IBM watsonx.ai REST adapter using server-side IBM IAM authentication;
+- Granite as the explanation layer only — the deterministic MomentGuard engine remains authoritative;
+- `GET /api/ibm/status` for configuration state;
+- `POST /api/ibm/explain` for a real Granite explanation call;
+- verified runtime traces shown in Proof Center only after a successful IBM Cloud response;
+- candidate watsonx Orchestrate artifacts remain under `ibm/` for future orchestration expansion.
 
-Before submission, the team should complete one genuine IBM Bob task and one genuine watsonx Orchestrate coordinator → specialist → tool invocation in its provisioned account, then save a redacted execution trace. Use Granite only if the entitled account actually lists an appropriate Granite model. See `ibm/README.md`.
+See `docs/IBM_WATSONX_SETUP.md`. Never commit the real IBM Cloud API key.
 
 ## API highlights
 
@@ -126,6 +142,8 @@ Before submission, the team should complete one genuine IBM Bob task and one gen
 - `GET /api/events` and `/api/analytics` — auditable runtime evidence
 - `GET /api/proof` — live judge-facing decision trace, alternatives, accessibility evidence and IBM execution status
 - `GET /api/evaluation` — executable 100-scenario POC evaluation suite
+- `GET /api/ibm/status` — safe IBM Cloud configuration status (no secrets)
+- `POST /api/ibm/explain` — real watsonx.ai / Granite grounded explanation
 - `GET /api/agents` — honest IBM integration status and traces
 - `WS /ws/live` — versioned real-time snapshots
 

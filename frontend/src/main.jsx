@@ -169,7 +169,7 @@ function ImpactCard({ analytics }) {
 }
 
 
-function ProofCenter({ proof, analytics, onRefresh }) {
+function ProofCenter({ proof, analytics, onRefresh, onRunGranite, ibmRunning, ibmStatus }) {
   if (!proof) return <div className="loading-card">Building live decision evidence…</div>;
   const final = proof.finalDecision || {};
   const ibm = proof.ibmExecution || {};
@@ -266,8 +266,16 @@ function ProofCenter({ proof, analytics, onRefresh }) {
               <div className={`ibm-step ${step.status}`} key={`${step.label}-${index}`}><span>{step.status === "verified" || step.status === "local" ? "✓" : "○"}</span><strong>{step.label}</strong><small>{step.status.toUpperCase()}</small></div>
             ))}
           </div>
+          {ibm.model && <div className="evidence-kv"><span>Granite model</span><strong>{ibm.model}</strong></div>}
           {ibm.latencyMs !== null && ibm.latencyMs !== undefined && <div className="evidence-kv"><span>Runtime latency</span><strong>{ibm.latencyMs} ms</strong></div>}
+          {ibm.verified && ibm.explanation && <div className="granite-explanation"><span>GRANITE EXPLANATION</span><p>{ibm.explanation}</p></div>}
           {!ibm.verified && <p className="truth-callout">{ibm.note}</p>}
+          <div className="ibm-action-row">
+            <button className="secondary-button" disabled={!ibmStatus?.configured || ibmRunning} onClick={onRunGranite}>
+              {ibmRunning ? "Calling IBM Granite…" : ibmStatus?.configured ? "Run IBM Granite explanation" : "Add watsonx credentials to enable"}
+            </button>
+            <small>{ibmStatus?.configured ? "Real IBM Cloud call · explanation-only" : "backend/.env → WATSONX_API_KEY, PROJECT_ID, MODEL_ID"}</small>
+          </div>
         </article>
       </div>
 
@@ -324,6 +332,8 @@ function App() {
   const [judgeTab, setJudgeTab] = useState("proof");
   const [proof, setProof] = useState(null);
   const [evaluation, setEvaluation] = useState(null);
+  const [ibmStatus, setIbmStatus] = useState(null);
+  const [ibmRunning, setIbmRunning] = useState(false);
   const version = useRef(-1);
   const session = useRef(null);
   const retiredSessions = useRef(new Set());
@@ -368,12 +378,25 @@ function App() {
     }
   }
 
+  async function runGraniteExplanation() {
+    if (!ibmStatus?.configured || ibmRunning) return;
+    setIbmRunning(true);
+    const result = await request("ibm/explain", {});
+    setIbmRunning(false);
+    if (result?.verified) {
+      await refreshProof();
+      const status = await request("ibm/status");
+      if (status) setIbmStatus(status);
+    }
+  }
+
   useEffect(() => {
     let socket;
     let retry;
     let stopped = false;
     request("state");
     request("experiments?seed=42&fans=30").then((data) => data && setAnalytics(data));
+    request("ibm/status").then((data) => data && setIbmStatus(data));
 
     function connect() {
       socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/live`);
@@ -610,19 +633,19 @@ function App() {
         </section>
 
         <section id="technology" className="section-block">
-          <div className="section-title"><div><span className="kicker">IBM-READY AGENTIC ARCHITECTURE</span><h2>AI explains and orchestrates. Deterministic tools keep final authority.</h2></div><p>This separation makes the POC safer, testable and ready for a verified IBM cloud invocation without fabricating one.</p></div>
+          <div className="section-title"><div><span className="kicker">IBM CLOUD + EXPLAINABLE AI</span><h2>Granite explains. Deterministic tools keep final authority.</h2></div><p>MomentGuard can call IBM watsonx.ai on IBM Cloud for a grounded explanation while GO / WAIT / STAY / RETURN remain controlled by the tested safety engine.</p></div>
           <div className="architecture-flow">
             <article><span>01</span><div className="arch-icon">G</div><h3>Game Intelligence</h3><p>Derives an explainable Moment Risk score from score, clock, pause state and event context.</p><small className="status-chip active">LOCAL TOOL ACTIVE</small></article>
             <i>→</i>
             <article><span>02</span><div className="arch-icon">V</div><h3>Venue Intelligence</h3><p>Evaluates routes, queue load, accessibility, service time and closures.</p><small className="status-chip active">LOCAL TOOL ACTIVE</small></article>
             <i>→</i>
-            <article><span>03</span><div className="arch-icon">O</div><h3>watsonx Orchestrate</h3><p>Candidate coordinator and specialist definitions are included for verified account import.</p><small className="status-chip ready">ADAPTER READY · UNVERIFIED</small></article>
+            <article><span>03</span><div className="arch-icon">G</div><h3>watsonx.ai · Granite</h3><p>Generates a grounded fan-facing explanation after the deterministic decision is finalized.</p><small className={ibmStatus?.configured ? "status-chip active" : "status-chip ready"}>{ibmStatus?.configured ? "IBM CLOUD CONFIGURED" : "ADD CLOUD CREDENTIALS"}</small></article>
             <i>→</i>
             <article><span>04</span><div className="arch-icon">M</div><h3>MomentGuard Safety</h3><p>Validates session, version, destination and action before any agent proposal can influence the UI.</p><small className="status-chip active">GUARDRAILS ACTIVE</small></article>
           </div>
           <div className="ibm-proof-row">
-            <div><span className="kicker">IBM BOB</span><strong>Development evidence checkpoint</strong><p>Capture one genuine Bob development task before submission. The repository intentionally does not claim a Bob session that has not happened.</p></div>
-            <div><span className="kicker">GRANITE</span><strong>Explanation layer</strong><p>Use a model actually available in the team IBM account; keep the deterministic safety engine authoritative.</p></div>
+            <div><span className="kicker">IBM BOB</span><strong>Repository-aware development workflow</strong><p>Project-specific Bob agent context and evidence are preserved in `.bob/` and `bob_sessions/` for the submission.</p></div>
+            <div><span className="kicker">IBM CLOUD · GRANITE</span><strong>{ibmStatus?.configured ? "Runtime configured" : "Explanation layer ready"}</strong><p>{ibmStatus?.configured ? `watsonx.ai is configured for ${ibmStatus.model || "the selected Granite model"}. Run it in Proof Center to create a verified trace.` : "Add the team's watsonx credentials server-side, then run one explanation from Proof Center."}</p></div>
             <div><span className="kicker">AUDITABILITY</span><strong>Every decision has evidence</strong><p>Risk breakdown, route calculation, safety buffer, event history and agent trace are inspectable.</p></div>
           </div>
         </section>
@@ -636,7 +659,7 @@ function App() {
               <button className={judgeTab === "demo" ? "active" : ""} onClick={() => setJudgeTab("demo")}>Demo Controls</button>
             </div>
 
-            {judgeTab === "proof" && <ProofCenter proof={proof} analytics={analytics} onRefresh={refreshProof} />}
+            {judgeTab === "proof" && <ProofCenter proof={proof} analytics={analytics} onRefresh={refreshProof} onRunGranite={runGraniteExplanation} ibmRunning={ibmRunning} ibmStatus={ibmStatus} />}
             {judgeTab === "evaluation" && <EvaluationLab evaluation={evaluation} onRun={runEvaluation} />}
             {judgeTab === "demo" && (
               <div className="demo-controls-panel">

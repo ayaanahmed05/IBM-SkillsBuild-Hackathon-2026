@@ -211,3 +211,52 @@ def test_evaluation_categories_have_expected_sizes(client):
     result=client.get('/api/evaluation').json()
     sizes={c['id']:c['total'] for c in result['categories']}
     assert sizes=={'highRisk':30,'safeWindow':30,'queueSpike':20,'accessibility':10,'facilityClosure':10}
+
+
+def test_ibm_status_is_honest_when_unconfigured(client):
+    status=client.get('/api/ibm/status').json()
+    assert status['configured'] is False
+    assert status['provider']=='IBM watsonx.ai / Granite'
+    assert status['decisionAuthority']=='MomentGuard deterministic safety engine'
+    response=client.post('/api/ibm/explain')
+    assert response.status_code==503
+    assert client.get('/api/proof').json()['ibmExecution']['verified'] is False
+
+
+def test_watsonx_prompt_preserves_deterministic_authority(client):
+    from app.watsonx import build_explanation_messages
+    snapshot=client.get('/api/state').json()
+    messages=build_explanation_messages(snapshot)
+    text=' '.join(str(m['content']) for m in messages)
+    assert 'MUST NOT change the action or destination' in text
+    assert snapshot['recommendation']['action'] in text
+    assert str(snapshot['recommendation']['riskScore']) in text
+
+
+def test_verified_granite_trace_updates_proof(monkeypatch):
+    import app.main as main_module
+    async def fake_granite(snapshot, settings):
+        return {
+            'explanation':'Stay seated because the current high-risk game state exceeds the configured departure threshold.',
+            'provider':'IBM watsonx.ai / Granite',
+            'model':'ibm/granite-test',
+            'latencyMs':42.5,
+            'usage':{'input_tokens':10,'output_tokens':12},
+        }
+    monkeypatch.setattr(main_module,'generate_granite_explanation',fake_granite)
+    settings=Settings(
+        database_url='sqlite:///:memory:',
+        watsonx_api_key='test',
+        watsonx_project_id='project',
+        watsonx_model_id='ibm/granite-test',
+    )
+    with TestClient(create_app(settings)) as c:
+        before=c.get('/api/state').json()['recommendation']['action']
+        response=c.post('/api/ibm/explain')
+        assert response.status_code==200,response.text
+        assert response.json()['decisionChanged'] is False
+        assert c.get('/api/state').json()['recommendation']['action']==before
+        proof=c.get('/api/proof').json()
+        assert proof['ibmExecution']['verified'] is True
+        assert proof['ibmExecution']['model']=='ibm/granite-test'
+        assert 'Stay seated' in proof['ibmExecution']['explanation']
